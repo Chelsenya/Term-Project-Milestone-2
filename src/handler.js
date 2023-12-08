@@ -6,16 +6,24 @@ const path = require("path");
 
 const allRoutes = {
   // GET: localhost:3000/
-  "/:get": (request, response) => {
-    controller.getHomePage(request, response);
+  "/:get": async (request, response) => {
+    await controller.getHomePage(request, response);
   },
   // POST: localhost:3000/form
   "/form:post": (request, response) => {
     controller.sendFormData(request, response);
   },
   // POST: localhost:3000/images
-  "/images:post": (request, response) => {
-    controller.uploadImages(request, response);
+  "/images:post": async (request, response) => {
+    try {
+      await controller.uploadImages(request, response);
+      response.writeHead(200, {'Content-Type': 'text/html'});
+      response.end(`<h1>Image Uploaded Successfully</h1>`);
+    } catch (err) {
+      response.writeHead(500, {'Content-Type': 'text/html'});
+      response.end(err.message);
+    }
+    
   },
   // GET: localhost:3000/feed
   // Shows instagram profile for a given user
@@ -34,15 +42,48 @@ const allRoutes = {
 
 function handler(request, response) {
   const { url, method } = request;
-
   const { pathname } = parse(url, true);
+  const filePath = path.join(__dirname, "..", pathname);
 
-  const key = `${pathname}:${method.toLowerCase()}`;
-  const chosen = allRoutes[key] || allRoutes.default;
+  if (pathname.startsWith("/src/photos/")) {
+    if (!filePath.startsWith(path.join(__dirname, "..", "src/photos/"))) {
+      response.writeHead(403);
+      response.end("Access Denied");
+      return;
+    }
 
-  return Promise.resolve(chosen(request, response)).catch(
-    handlerError(response)
-  );
+    const readStream = createReadStream(filePath);
+    readStream.on("open", () => {
+      const extension = path.extname(filePath);
+      const contentType =
+        extension === ".png"
+          ? "image/png"
+          : (extension === ".jpeg" || extension === ".jpg"
+          ? "image/jpeg"
+          : "application/octet-stream");
+      response.writeHead(200, { "Content-Type": contentType });
+      readStream.pipe(response);
+    });
+
+    readStream.on("error", (err) => {
+      if (err.code === "ENOENT") {
+        response.writeHead(404, DEFAULT_HEADER);
+        response.end("Not Found");
+      } else {
+        console.error(err);
+        response.writeHead(500);
+        response.end("Internal Server Error");
+      }
+    });
+
+  } else {
+    const key = `${pathname}:${method.toLowerCase()}`;
+    const chosen = allRoutes[key] || allRoutes.default;
+
+    return Promise.resolve(chosen(request, response)).catch(
+      handlerError(response)
+    );
+  }
 }
 
 function handlerError(response) {

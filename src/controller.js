@@ -1,20 +1,42 @@
 const fs = require("fs/promises");
 const { DEFAULT_HEADER } = require("./util/util");
 const path = require("path");
-var qs = require("querystring");
+const qs = require("querystring");
+const formidable = require("formidable");
 
 const controller = {
   getHomePage: async (request, response) => {
-    const database = await fs.readFile("database/data.json");
+    const database = await fs.readFile(path.join("database", "data.json"));
     const usersArr = JSON.parse(database);
+    let htmlContent = `<h1>Homepage</h1>
+    <h2>Users</h2>`;
+
+    usersArr.forEach((user) => {
+      const username = user.username;
+      const pfp = user.profile;
+      htmlContent += `<div id="form"><form action="/images" method="post">
+      <img src="${path.join(
+        "src",
+        "photos",
+        username,
+        pfp
+      )}" alt="profile picture">
+      <input type="file" id="fileUpload" style="display:none;">
+      <button><label for="fileUpload">Upload</label></button>
+      <button><a href="/feed?user=${username}">${username}</a></button>
+      </form></div>`;
+    });
 
     return response.end(`
-    <h1>Hello world</h1> <style> h1 {color:red;}</style>
-    <form action="/form" method="post">
-    <input type="text" name="username"><br>
-    <input type="text" name="password"><br>
-    <input type="submit" value="Upload">
-    </form>
+    ${htmlContent}
+
+    <style>
+     h1 {color:black; text-align:center;}
+     button {height:2rem; width:5rem;}
+     #form {margin-bottom:1rem; border: 1px solid; width:auto; border-radius: 10%; justify-content: center;}
+     form {display: flex; flex-direction: row; align-items: center; justify-content:center; margin: 5px auto; column-gap: 5%;}
+     img {height: 6em; width: 6em; border: 1px solid; border-radius: 50%;}
+    </style>
     `);
   },
   sendFormData: (request, response) => {
@@ -31,7 +53,11 @@ const controller = {
   },
 
   getFeed: (request, response) => {
-    // console.log(request.url); try: http://localhost:3000/feed?username=john123
+    const url = request.url;
+    const urlArr = url.split("=");
+    const user = urlArr[1];
+
+    //try: http://localhost:3000/feed?username=john123
     response.write(`
     <html>
     <head>
@@ -417,7 +443,7 @@ const controller = {
 
 			<div class="profile-user-settings">
 
-				<h1 class="profile-user-name">janedoe_</h1>
+				<h1 class="profile-user-name">${user}</h1>
 
 				<button class="btn profile-edit-btn">Edit Profile</button>
 
@@ -437,7 +463,7 @@ const controller = {
 
 			<div class="profile-bio">
 
-				<p><span class="profile-real-name">Jane Doe</span> Lorem ipsum dolor sit, amet consectetur adipisicing elit</p>
+				<p><span class="profile-real-name">${user}</span> Lorem ipsum dolor sit, amet consectetur adipisicing elit</p>
 
 			</div>
 
@@ -686,7 +712,28 @@ const controller = {
     response.end();
   },
 
-  uploadImages: (request, response) => {},
+  uploadImages: async (request, response) => {
+    if (request.url === "/images" && request.method.toLowerCase() === "post") {
+      const form = new formidable.IncomingForm({});
+      let fields;
+      let files;
+
+      try {
+        [fields, files] = await form.parse(request);
+        
+      } catch (err) {
+        console.error(err);
+        response.writeHead(err.httpCode || 400, {
+          "Content-Type": "text/plain",
+        });
+        response.end(String(err));
+        return;
+      }
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ fields, files }, null, 2));
+      return;
+    }
+  },
 };
 
 module.exports = controller;

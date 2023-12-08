@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project</title>
+  </head>
+  <body>
+    <h1>Home Page</h1>
+    <h2>Users</h2>
+    <div id="form">
+      <form action="/images" method="post">
+        <img src="<%= path.join( "src", "photos", username, pfp )%>"
+        alt="profile picture">
+        <input type="file" id="fileUpload" style="display: none" />
+        <button type="submit"><label for="fileUpload">Upload</label></button>
+        <button><a href="/feed?user=${username}">${username}</a></button>
+      </form>
+    </div>
+    `;
+
+    <style>
+      h1 {
+        color: black;
+        text-align: center;
+      }
+      button {
+        height: 2rem;
+        width: 5rem;
+      }
+      #form {
+        margin-bottom: 1rem;
+        border: 1px solid;
+        width: auto;
+        border-radius: 10%;
+        justify-content: center;
+      }
+      form {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        margin: 5px auto;
+        column-gap: 5%;
+      }
+      img {
+        height: 6em;
+        width: 6em;
+        border: 1px solid;
+        border-radius: 50%;
+      }
+    </style>
+  </body>
+</html>
